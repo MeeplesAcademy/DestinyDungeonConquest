@@ -1051,6 +1051,13 @@ function goToSport(sportKey){
   state.secondary = (sportKey === "dashboard" || sportKey === "calendar") ? null :
     (sportKey === "cfb" || sportKey === "nfl") ? "main" :
     (TEAMS[sportKey] ? TEAMS[sportKey].order[0] : null);
+  if (sportKey === "calendar"){
+    const idx = currentSeasonMonthIndex();
+    const [y, m] = SEASON_MONTHS[idx];
+    state.calYear = y;
+    state.calMonth = m;
+    state.calendarJumpPending = true;
+  }
   renderAll();
 }
 
@@ -1512,11 +1519,17 @@ function cmpCellHTML(g, team){
   if (!g) return `<div class="cmp-cell bye">—</div>`;
   if (g.status === "bye") return `<div class="cmp-cell bye">Bye</div>`;
   const homeAwayClass = g.home ? "is-home" : "is-away";
+  const thirdLine = g.status === "final"
+    ? (() => {
+        const win = g.score.team > g.score.opp;
+        return `<span class="cmp-meta" style="font-weight:bold; color:${win ? "#2f7a2f" : "#a33"};">Final: ${g.score.team}-${g.score.opp} (${win ? "W" : "L"})</span>`;
+      })()
+    : `<span class="cmp-meta">${g.tv || "TV TBA"}</span>`;
   return `
     <div class="cmp-cell ${homeAwayClass}" style="--tc1:${team.c1}; --tc2:${team.c2}">
       <span class="cmp-opp">${g.home ? "vs" : "@"} ${g.opp}</span>
       <span class="cmp-meta">${fmtDate(g.date)} · ${g.home ? "Home" : "Away"}</span>
-      <span class="cmp-meta">${g.tv || "TV TBA"}</span>
+      ${thirdLine}
     </div>`;
 }
 
@@ -1583,10 +1596,89 @@ function renderNHLStandings(){
   return html;
 }
 
+// Local (not UTC) YYYY-MM-DD for "today" — avoids an early-morning PT vs UTC date mismatch.
+function todayISO(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function nextGames(teamKey, count){
-  const games = (SCHEDULES[teamKey] || []).filter(g => g.status === "scheduled");
+  const today = todayISO();
+  const games = (SCHEDULES[teamKey] || []).filter(g => g.status === "scheduled" && g.date >= today);
   return games.slice(0, count);
 }
+
+/* =========================================================
+   LIVE SCORES — same pattern as standings/rankings: fetch
+   ESPN's public team-schedule API, update SCHEDULES in place
+   when a game is confirmed final, fail silently otherwise.
+   Runs once on load; every view that reads SCHEDULES (game
+   cards, Calendar, NFL comparison grid) picks up the update
+   automatically on the next render.
+========================================================= */
+const TEAM_ESPN_META = {
+  sea: { sport:"football", league:"nfl", id:"sea" },
+  chi: { sport:"football", league:"nfl", id:"chi" },
+  den: { sport:"football", league:"nfl", id:"den" },
+  lak: { sport:"hockey", league:"nhl", id:"la" },
+  skk: { sport:"hockey", league:"nhl", id:"sea" },
+  usc: { sport:"football", league:"college-football", id:"30" },
+  uw: { sport:"football", league:"college-football", id:"264" }
+};
+
+let liveScoresFetchState = "idle"; // idle | loading | done | failed
+
+async function fetchLiveScoresForTeam(teamKey){
+  const meta = TEAM_ESPN_META[teamKey];
+  const games = SCHEDULES[teamKey];
+  if (!meta || !games) return;
+  const url = `https://site.api.espn.com/apis/site/v2/sports/${meta.sport}/${meta.league}/teams/${meta.id}/schedule?season=2026`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${teamKey}`);
+  const data = await res.json();
+  const events = data?.events || [];
+
+  events.forEach(ev => {
+    const comp = ev.competitions?.[0];
+    if (!comp) return;
+    const isFinal = comp.status?.type?.completed || comp.status?.type?.state === "post";
+    if (!isFinal) return;
+
+    const evDate = (ev.date || "").slice(0, 10);
+    // ESPN dates are UTC — a late PT kickoff can land on the next UTC calendar day,
+    // so try the exact date first, then one day earlier, before giving up.
+    let match = games.find(g => g.date === evDate);
+    if (!match){
+      const d = new Date(evDate + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() - 1);
+      const prevDay = d.toISOString().slice(0, 10);
+      match = games.find(g => g.date === prevDay);
+    }
+    if (!match || match.status === "final") return;
+
+    const teamIdUpper = String(meta.id).toUpperCase();
+    const own = comp.competitors?.find(c =>
+      String(c.id) === String(meta.id) || (c.team?.abbreviation || "").toUpperCase() === teamIdUpper
+    );
+    const opp = comp.competitors?.find(c => c !== own);
+    if (!own || !opp || own.score == null || opp.score == null) return;
+
+    match.status = "final";
+    match.score = { team: parseInt(own.score, 10), opp: parseInt(opp.score, 10) };
+  });
+}
+
+async function fetchAllLiveScores(){
+  liveScoresFetchState = "loading";
+  const results = await Promise.allSettled(
+    Object.keys(TEAM_ESPN_META).map(k => fetchLiveScoresForTeam(k))
+  );
+  const anyFailed = results.some(r => r.status === "rejected");
+  results.forEach(r => { if (r.status === "rejected") console.warn("Live score fetch failed:", r.reason); });
+  liveScoresFetchState = anyFailed ? "failed" : "done";
+  renderAll();
+}
+
 
 // Sortable value combining date + parsed kickoff time, so same-day games order correctly too.
 function parseTimeMinutes(tvStr){
@@ -1720,9 +1812,20 @@ function calendarEntryHTML(entry){
   const color = calendarColorFor(sportKey, teamKey);
   const teamDisp = DISPLAY_NAME[teamKey];
   const oppDisp = MASCOT_MAP[game.opp] || game.opp;
+  const matchup = `${teamDisp} ${game.home ? "vs" : "@"} ${oppDisp}`;
+
+  if (game.status === "final"){
+    const win = game.score.team > game.score.opp;
+    return `<div class="cal-entry" style="--tc:${color}">${matchup} - ${game.score.team}-${game.score.opp} (${win ? "W" : "L"})</div>`;
+  }
+  if (game.date < todayISO()){
+    // Past but not yet confirmed final (live fetch missed it or hasn't run) — no point
+    // showing a stale kickoff time/network for a game that's already happened.
+    return `<div class="cal-entry" style="--tc:${color}">${matchup}</div>`;
+  }
   const { network, time } = parseGameTV(game.tv);
   const timeSeg = time ? ` - ${time}` : "";
-  return `<div class="cal-entry" style="--tc:${color}">${teamDisp} ${game.home ? "vs" : "@"} ${oppDisp} - ${network}${timeSeg}</div>`;
+  return `<div class="cal-entry" style="--tc:${color}">${matchup} - ${network}${timeSeg}</div>`;
 }
 
 function daysInMonth(year, monthIdx){ return new Date(year, monthIdx + 1, 0).getDate(); }
@@ -1733,6 +1836,20 @@ const SEASON_MONTHS = [
   [2026,8],[2026,9],[2026,10],[2026,11],
   [2027,0],[2027,1],[2027,2],[2027,3]
 ];
+
+// Clamp "today" into the season range: before Sept 2026 -> first month, after April
+// 2027 -> last month, otherwise whichever month actually contains today.
+function currentSeasonMonthIndex(){
+  const now = new Date();
+  const key = now.getFullYear() * 100 + now.getMonth();
+  let idx = SEASON_MONTHS.findIndex(([y, m]) => y === now.getFullYear() && m === now.getMonth());
+  if (idx !== -1) return idx;
+  const [firstY, firstM] = SEASON_MONTHS[0];
+  const [lastY, lastM] = SEASON_MONTHS[SEASON_MONTHS.length - 1];
+  if (key < firstY * 100 + firstM) return 0;
+  if (key > lastY * 100 + lastM) return SEASON_MONTHS.length - 1;
+  return 0;
+}
 
 function calNav(delta){
   let idx = SEASON_MONTHS.findIndex(([y, m]) => y === state.calYear && m === state.calMonth);
@@ -1745,6 +1862,32 @@ function calNav(delta){
   if (el) el.scrollIntoView({ behavior:"smooth", block:"start" });
   const label = document.getElementById("calCurrentLabel");
   if (label) label.textContent = new Date(y, m, 1).toLocaleDateString("en-US", { month:"long", year:"numeric" });
+}
+
+// Scroll-spy: keep the sticky label in sync with whichever month is actually in
+// view, instead of only updating on Prev/Next clicks.
+let calendarScrollObserver = null;
+function initCalendarScrollSync(){
+  if (calendarScrollObserver) calendarScrollObserver.disconnect();
+  const sections = document.querySelectorAll(".cal-month-section");
+  const label = document.getElementById("calCurrentLabel");
+  if (!sections.length || !label) return;
+  calendarScrollObserver = new IntersectionObserver((entries) => {
+    let best = null;
+    entries.forEach(e => {
+      if (e.isIntersecting && (!best || e.intersectionRatio > best.intersectionRatio)) best = e;
+    });
+    if (best){
+      const m = best.target.id.match(/cal-month-(\d+)-(\d+)/);
+      if (m){
+        const y = parseInt(m[1], 10), mo = parseInt(m[2], 10);
+        state.calYear = y;
+        state.calMonth = mo;
+        label.textContent = new Date(y, mo, 1).toLocaleDateString("en-US", { month:"long", year:"numeric" });
+      }
+    }
+  }, { rootMargin:"-70px 0px -60% 0px", threshold:[0, 0.25, 0.5, 0.75, 1] });
+  sections.forEach(s => calendarScrollObserver.observe(s));
 }
 
 function renderMonthSection(year, month){
@@ -1781,7 +1924,6 @@ function renderCalendar(){
   const sections = SEASON_MONTHS.map(([y, m]) => renderMonthSection(y, m)).join("");
   return `
     <h2 class="section-title">Calendar</h2>
-    <div class="note">Every tracked team's games for the season, colored by team. When a primary team plays one of its own secondary teams, only the primary team's line is shown. Use Prev/Next to jump between months.</div>
     <div class="cal-header">
       <button class="refresh-btn cal-nav-btn" onclick="calNav(-1)">↑ Prev Month</button>
       <div class="cal-month-label" id="calCurrentLabel">${initialLabel}</div>
@@ -1799,6 +1941,12 @@ function renderContent(){
   }
   if (state.primary === "calendar"){
     content.innerHTML = renderCalendar();
+    initCalendarScrollSync();
+    if (state.calendarJumpPending){
+      state.calendarJumpPending = false;
+      const el = document.getElementById(`cal-month-${state.calYear}-${state.calMonth}`);
+      if (el) el.scrollIntoView({ behavior:"auto", block:"start" });
+    }
     return;
   }
   if (state.primary === "cfb" && state.secondary === "main"){
@@ -1829,6 +1977,7 @@ function renderAll(){
 }
 
 renderAll();
+fetchAllLiveScores();
 </script>
 </body>
 </html>
