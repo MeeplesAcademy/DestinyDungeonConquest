@@ -1792,7 +1792,7 @@ function dashboardCardHTML(sportKey, teamKey, team, game){
 }
 
 function renderDashboard(){
-  let html = `<h2 class="section-title">Favorite Teams</h2><div class="dash-columns">`;
+  let html = `<h2 class="section-title" style="font-size:20px;">Favorite Teams - Next 3 Games</h2><div class="dash-columns">`;
   DASHBOARD_COLUMNS.forEach(sportKey => {
     const sport = TEAMS[sportKey];
     let cards = [];
