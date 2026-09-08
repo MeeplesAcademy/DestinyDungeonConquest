@@ -212,6 +212,13 @@
     line-height:1.35;
     margin-bottom:3px;
   }
+  .cal-entry-team{ font-weight:bold; }
+  .cal-entry-meta{
+    display:block;
+    color:var(--text-mute);
+    font-size:11px;
+    margin-top:1px;
+  }
   @media (max-width:700px){
     .cal-grid{ grid-template-columns:repeat(7, minmax(36px, 1fr)); }
     .cal-entry{ font-size:9px; }
@@ -1628,6 +1635,19 @@ const TEAM_ESPN_META = {
 
 let liveScoresFetchState = "idle"; // idle | loading | done | failed
 
+// ESPN's score field shows up as either a plain string/number or an
+// {value, displayValue} object depending on which endpoint/era — handle both
+// rather than assume one, and never trust a value that doesn't parse cleanly.
+function extractEspnScore(competitor){
+  if (!competitor) return null;
+  const raw = (typeof competitor.score === "object" && competitor.score !== null)
+    ? (competitor.score.value ?? competitor.score.displayValue)
+    : competitor.score;
+  if (raw == null) return null;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 async function fetchLiveScoresForTeam(teamKey){
   const meta = TEAM_ESPN_META[teamKey];
   const games = SCHEDULES[teamKey];
@@ -1661,10 +1681,14 @@ async function fetchLiveScoresForTeam(teamKey){
       String(c.id) === String(meta.id) || (c.team?.abbreviation || "").toUpperCase() === teamIdUpper
     );
     const opp = comp.competitors?.find(c => c !== own);
-    if (!own || !opp || own.score == null || opp.score == null) return;
+    const ownScore = extractEspnScore(own);
+    const oppScore = extractEspnScore(opp);
+    // Only commit to "final" once we actually have two real numbers — a
+    // half-parsed score is worse than leaving the game as still "scheduled".
+    if (ownScore == null || oppScore == null) return;
 
     match.status = "final";
-    match.score = { team: parseInt(own.score, 10), opp: parseInt(opp.score, 10) };
+    match.score = { team: ownScore, opp: oppScore };
   });
 }
 
@@ -1812,20 +1836,29 @@ function calendarEntryHTML(entry){
   const color = calendarColorFor(sportKey, teamKey);
   const teamDisp = DISPLAY_NAME[teamKey];
   const oppDisp = MASCOT_MAP[game.opp] || game.opp;
-  const matchup = `${teamDisp} ${game.home ? "vs" : "@"} ${oppDisp}`;
+  const matchupLine = `<span class="cal-entry-team">${teamDisp}</span> ${game.home ? "vs" : "@"} ${oppDisp}`;
 
   if (game.status === "final"){
     const win = game.score.team > game.score.opp;
-    return `<div class="cal-entry" style="--tc:${color}">${matchup} - ${game.score.team}-${game.score.opp} (${win ? "W" : "L"})</div>`;
+    const resultColor = win ? "#2f7a2f" : "#a33";
+    return `<div class="cal-entry" style="--tc:${color}">
+      <div class="cal-entry-matchup">${matchupLine}</div>
+      <div class="cal-entry-meta" style="font-weight:bold; color:${resultColor};">${game.score.team}-${game.score.opp} (${win ? "W" : "L"})</div>
+    </div>`;
   }
   if (game.date < todayISO()){
     // Past but not yet confirmed final (live fetch missed it or hasn't run) — no point
     // showing a stale kickoff time/network for a game that's already happened.
-    return `<div class="cal-entry" style="--tc:${color}">${matchup}</div>`;
+    return `<div class="cal-entry" style="--tc:${color}">
+      <div class="cal-entry-matchup">${matchupLine}</div>
+    </div>`;
   }
   const { network, time } = parseGameTV(game.tv);
-  const timeSeg = time ? ` - ${time}` : "";
-  return `<div class="cal-entry" style="--tc:${color}">${matchup} - ${network}${timeSeg}</div>`;
+  const metaLine = time ? `${time} - ${network}` : network;
+  return `<div class="cal-entry" style="--tc:${color}">
+    <div class="cal-entry-matchup">${matchupLine}</div>
+    <div class="cal-entry-meta">${metaLine}</div>
+  </div>`;
 }
 
 function daysInMonth(year, monthIdx){ return new Date(year, monthIdx + 1, 0).getDate(); }
