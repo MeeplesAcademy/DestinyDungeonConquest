@@ -55,6 +55,9 @@
     padding:0 28px;
     background:var(--panel);
     border-bottom:1px solid var(--border);
+    position:sticky;
+    top:0;
+    z-index:20;
   }
   nav.primary button{
     font-family:inherit;
@@ -140,6 +143,11 @@
     color:var(--text);
   }
   .refresh-btn:hover{ background:#f1f4ee; }
+  .refresh-btn.refresh-btn-lg{
+    font-size:13px;
+    padding:6px 16px;
+    border-radius:14px;
+  }
 
   /* ---- Calendar tab ---- */
   .cal-header{
@@ -149,7 +157,7 @@
     margin-bottom:16px;
     padding:10px 4px;
     position:sticky;
-    top:0;
+    top:46px;
     background:var(--bg);
     z-index:5;
     border-bottom:1px solid var(--border);
@@ -350,7 +358,7 @@
     align-items:start;
   }
   .main-3col.with-rankings{
-    grid-template-columns:0.75fr 0.9fr 1fr 0.9fr;
+    grid-template-columns:1fr 1.2fr 1.2fr;
   }
   .col-heading{
     font-size:16px;
@@ -471,14 +479,14 @@
   }
   .game-card{
     display:grid;
-    grid-template-columns:90px 1fr 130px 90px;
+    grid-template-columns:90px 1fr 110px;
     align-items:center;
-    gap:12px;
+    gap:14px;
     background:var(--panel);
     border:1px solid var(--border);
     border-left:5px solid var(--tc1);
     border-radius:4px;
-    padding:10px 14px;
+    padding:12px 16px;
     cursor:pointer;
   }
   .game-card:hover{ background:#fbfbf9; }
@@ -499,35 +507,45 @@
     background: color-mix(in srgb, var(--tc2, var(--tc1)) 8%, var(--panel));
   }
   .game-card .date{
-    font-size:11px;
-    color:var(--text-mute);
-  }
-  .game-card .matchup{ font-size:13px; }
-  .game-card .matchup .loc{
-    display:block;
-    font-size:11px;
-    color:var(--text-mute);
-    margin-top:1px;
-  }
-  .game-card .tv{
-    font-size:11px;
-    color:var(--text-mute);
-    text-align:left;
-  }
-  .game-card .score{
     font-size:13px;
     font-weight:bold;
+    color:var(--text);
+  }
+  .game-card-main{ min-width:0; }
+  .game-card-opp{
+    font-size:15px;
+    font-weight:bold;
+    line-height:1.3;
+  }
+  .game-card-tv{
+    font-size:12px;
+    color:var(--text-mute);
+    margin-top:2px;
+    line-height:1.3;
+  }
+  .game-card .score{
+    font-size:15px;
+    font-weight:bold;
     text-align:right;
+  }
+  .game-card .score .wl-tag{
+    font-size:15px;
+    font-weight:bold;
   }
   .game-card .score.scheduled{
     font-weight:normal;
     color:var(--text-mute);
-    font-size:11px;
+    font-size:12px;
   }
 
   @media (max-width:640px){
     .game-card{ grid-template-columns:1fr; text-align:left; }
     .game-card .score{ text-align:left; }
+  }
+
+  /* Individual team schedule pages: condensed left column, not full page width. */
+  .schedule-narrow{
+    max-width:540px;
   }
 
   /* ---- Standings ---- */
@@ -1124,15 +1142,16 @@ function gameCardHTML(g, team){
     return `
       <div class="game-card" style="--tc1:#c9ccc4; opacity:.65; cursor:default;">
         <div class="date">${fmtDate(g.date)}</div>
-        <div class="matchup">Bye Week</div>
-        <div class="tv"></div>
+        <div class="game-card-main">
+          <div class="game-card-opp">Bye Week</div>
+        </div>
         <div class="score scheduled">—</div>
       </div>`;
   }
   let scoreHTML;
   if (g.status === "final"){
     const win = g.score.team > g.score.opp;
-    scoreHTML = `<div class="score">${g.score.team}-${g.score.opp} <span style="font-weight:normal;font-size:10px;color:${win ? '#2f7a2f' : '#a33'}">${win ? "W" : "L"}</span></div>`;
+    scoreHTML = `<div class="score">${g.score.team}-${g.score.opp} <span class="wl-tag" style="color:${win ? '#2f7a2f' : '#a33'}">${win ? "W" : "L"}</span></div>`;
   } else {
     scoreHTML = `<div class="score scheduled">Scheduled</div>`;
   }
@@ -1140,8 +1159,10 @@ function gameCardHTML(g, team){
   return `
     <div class="game-card ${homeAwayClass}" style="--tc1:${team.c1}; --tc2:${team.c2}">
       <div class="date">${fmtDate(g.date)}</div>
-      <div class="matchup">${g.home ? "vs" : "@"} ${g.opp}<span class="loc">${g.home ? "Home" : "Away"}</span></div>
-      <div class="tv">${g.tv || "TV TBD"}</div>
+      <div class="game-card-main">
+        <div class="game-card-opp">${g.home ? "vs" : "@"} ${g.opp}</div>
+        <div class="game-card-tv">${g.tv || "TV TBD"} · ${g.home ? "Home" : "Away"}</div>
+      </div>
       ${scoreHTML}
     </div>`;
 }
@@ -1164,10 +1185,12 @@ function renderTeamSchedule(sportKey, teamKey){
   const note = SCHEDULE_NOTES[teamKey] || "Sample data shown for layout preview. Real dates/opponents/TV/scores to follow.";
   const logo = LOGOS[teamKey] ? `<img class="header-logo" src="${LOGOS[teamKey]}" alt="${team.name} logo">` : "";
   return `
-    <h2 class="section-title header-with-logo">${logo}<span>${team.name} — Full Schedule</span></h2>
-    <div class="note">${note}</div>
-    <div class="game-list">
-      ${games.map(g => gameCardHTML(g, team)).join("")}
+    <div class="schedule-narrow">
+      <h2 class="section-title header-with-logo">${logo}<span>${team.name} — Full Schedule</span></h2>
+      <div class="note">${note}</div>
+      <div class="game-list">
+        ${games.map(g => gameCardHTML(g, team)).join("")}
+      </div>
     </div>`;
 }
 
@@ -1218,6 +1241,27 @@ function bigTenTable(){
     <tr><th>Team</th><th>Conf</th><th>Overall</th><th>PCT</th><th>Streak</th></tr>
     ${sorted.map(bigTenRow).join("")}
   </table>`;
+}
+
+function bigTenCompactTable(){
+  const sorted = [...BIG_TEN].sort((a, b) => b.confW - a.confW || b.ovrW - a.ovrW);
+  const rowColor = team => team === "USC" ? "var(--usc-1)" : team === "Washington" ? "var(--uw-1)" : null;
+  return `<div class="poll-compact"><table class="standings">
+    <tr><th>Team</th><th>Conf</th><th>Ovr</th><th>PCT</th></tr>
+    ${sorted.map(row => {
+      const mine = MY_TEAMS_CFB.includes(row.team);
+      const c = rowColor(row.team);
+      const styleAttr = c ? ` style="--rowc:${c}"` : "";
+      const totalGames = row.ovrW + row.ovrL;
+      const pct = row.known && totalGames > 0 ? (row.ovrW / totalGames).toFixed(3) : "—";
+      return `<tr class="${mine ? "my-team" : ""}"${styleAttr}>
+        <td><span class="team-cell" title="${row.team}">${row.team}</span></td>
+        <td>${row.confW}-${row.confL}</td>
+        <td>${row.ovrW}-${row.ovrL}</td>
+        <td>${pct}</td>
+      </tr>`;
+    }).join("")}
+  </table></div>`;
 }
 
 /* =========================================================
@@ -1442,16 +1486,20 @@ function switchCfbMainPoll(which){
 
 function cfbMainPollColumn(){
   const active = state.cfbMainPollTab || "ap";
-  const apActive = active === "ap";
+  const refreshAction = active === "b1g" ? "fetchBigTenStandings(true)" : "fetchApPoll(true)";
+  const body = active === "ap" ? apPollCompactTable()
+    : active === "cfp" ? cfpPollCompactTable()
+    : bigTenCompactTable();
   return `
     <div class="col-heading heading-with-btn">
       <div class="poll-tab-group">
-        <button class="poll-tab-btn ${apActive ? "active" : ""}" onclick="switchCfbMainPoll('ap')">AP Top 25</button>
-        <button class="poll-tab-btn ${!apActive ? "active" : ""}" onclick="switchCfbMainPoll('cfp')">CFP</button>
+        <button class="poll-tab-btn ${active === "ap" ? "active" : ""}" onclick="switchCfbMainPoll('ap')">AP Top 25</button>
+        <button class="poll-tab-btn ${active === "cfp" ? "active" : ""}" onclick="switchCfbMainPoll('cfp')">CFP</button>
+        <button class="poll-tab-btn ${active === "b1g" ? "active" : ""}" onclick="switchCfbMainPoll('b1g')">B1G</button>
       </div>
-      <button class="refresh-btn" onclick="fetchApPoll(true)">Refresh</button>
+      <button class="refresh-btn refresh-btn-lg" onclick="${refreshAction}">Refresh</button>
     </div>
-    ${apActive ? apPollCompactTable() : cfpPollCompactTable()}`;
+    ${body}`;
 }
 
 function cfpPollSection(){
@@ -1498,7 +1546,7 @@ function renderCFBMain(){
   if (apPollFetchState === "idle") fetchApPoll(true);
   return `
     <h2 class="section-title">College Football — Overview</h2>
-    <div class="note">Main page: AP Top 25, USC and UW schedules, and the Big Ten standings — all live from ESPN. Individual team tabs still have the full schedule view.</div>
+    <div class="note">Main page: Rankings (AP / CFP / B1G), USC and UW schedules — all live from ESPN. Individual team tabs still have the full schedule view.</div>
     <div class="main-3col with-rankings">
       <div>
         ${cfbMainPollColumn()}
@@ -1508,10 +1556,6 @@ function renderCFBMain(){
         <div class="game-list">
           ${(SCHEDULES.usc || []).map(g => gameCardHTML(g, TEAMS.cfb.teams.usc)).join("")}
         </div>
-      </div>
-      <div>
-        <div class="col-heading heading-with-btn"><span>Big Ten Standings</span><button class="refresh-btn" onclick="fetchBigTenStandings(true)">Refresh</button></div>
-        ${bigTenTable()}
       </div>
       <div>
         <div class="col-heading header-with-logo"><img class="header-logo" src="${LOGOS.uw}" alt="Washington Huskies logo"><span>Washington Huskies</span></div>
@@ -1919,7 +1963,7 @@ function initCalendarScrollSync(){
         label.textContent = new Date(y, mo, 1).toLocaleDateString("en-US", { month:"long", year:"numeric" });
       }
     }
-  }, { rootMargin:"-70px 0px -60% 0px", threshold:[0, 0.25, 0.5, 0.75, 1] });
+  }, { rootMargin:"-120px 0px -60% 0px", threshold:[0, 0.25, 0.5, 0.75, 1] });
   sections.forEach(s => calendarScrollObserver.observe(s));
 }
 
