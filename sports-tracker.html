@@ -379,24 +379,25 @@
   }
   .poll-tab-group{
     display:flex;
-    gap:4px;
+    gap:8px;
+    flex-wrap:wrap;
   }
   .poll-tab-btn{
     font-family:inherit;
-    font-size:14px;
+    font-size:13px;
     font-weight:bold;
-    background:none;
-    border:none;
-    border-bottom:2px solid transparent;
-    padding:2px 0;
-    margin-right:12px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:6px 14px;
     cursor:pointer;
     color:var(--text-mute);
   }
-  .poll-tab-btn:hover{ color:var(--text); }
+  .poll-tab-btn:hover{ color:var(--text); border-color:#b9bcb4; }
   .poll-tab-btn.active{
-    color:var(--text);
-    border-bottom-color:var(--accent);
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
   }
   @media (max-width:900px){
     .main-3col{ grid-template-columns:1fr; }
@@ -546,6 +547,62 @@
   /* Individual team schedule pages: condensed left column, not full page width. */
   .schedule-narrow{
     max-width:540px;
+  }
+
+  /* ---- Month-grouped collapsible schedule (long seasons: NHL) ---- */
+  .month-toolbar{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .month-toolbar .refresh-btn{
+    font-size:12px;
+    padding:5px 14px;
+    margin-left:0;
+  }
+  .month-group{
+    margin-bottom:10px;
+  }
+  .month-header{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:11px 14px;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:14px;
+    font-weight:bold;
+    text-align:left;
+    color:var(--text);
+  }
+  .month-header:hover{
+    background:#f1f4ee;
+    border-color:#b9bcb4;
+  }
+  .month-chevron{
+    display:inline-block;
+    font-size:11px;
+    color:var(--text-mute);
+    transition:transform 0.15s ease;
+    flex-shrink:0;
+  }
+  .month-header:not(.collapsed) .month-chevron{
+    transform:rotate(90deg);
+  }
+  .month-title{ flex-shrink:0; }
+  .month-record{
+    margin-left:auto;
+    font-weight:normal;
+    font-size:12px;
+    color:var(--text-mute);
+    white-space:nowrap;
+  }
+  .month-body{
+    margin-top:8px;
   }
 
   /* ---- Standings ---- */
@@ -872,7 +929,7 @@ const SCHEDULES = {
     { date:"2026-10-28", opp:"Toronto Maple Leafs", home:true, tv:"TV TBA 7:00pm PT", status:"scheduled" },
     { date:"2026-10-30", opp:"Calgary Flames", home:false, tv:"TV TBA 5:00pm PT", status:"scheduled" },
     { date:"2026-11-04", opp:"Calgary Flames", home:true, tv:"TV TBA 7:00pm PT", status:"scheduled" },
-    { date:"2026-11-07", opp:"New York", home:true, tv:"TV TBA 2:00pm PT", status:"scheduled" },
+    { date:"2026-11-07", opp:"New York Rangers", home:true, tv:"TV TBA 2:00pm PT", status:"scheduled" },
     { date:"2026-11-12", opp:"Carolina Hurricanes", home:false, tv:"TV TBA 9:00am PT · NHL Global Series, Helsinki", status:"scheduled" },
     { date:"2026-11-14", opp:"Carolina Hurricanes", home:false, tv:"TV TBA 10:00am PT · NHL Global Series, Helsinki", status:"scheduled" },
     { date:"2026-11-19", opp:"Vancouver Canucks", home:true, tv:"TV TBA 6:40pm PT", status:"scheduled" },
@@ -895,7 +952,7 @@ const SCHEDULES = {
     { date:"2026-12-22", opp:"San Jose Sharks", home:true, tv:"TV TBA 6:40pm PT", status:"scheduled" },
     { date:"2026-12-29", opp:"Philadelphia Flyers", home:true, tv:"TV TBA 6:40pm PT", status:"scheduled" },
     { date:"2026-12-30", opp:"Vancouver Canucks", home:false, tv:"TV TBA 6:30pm PT", status:"scheduled" },
-    { date:"2027-01-02", opp:"New York", home:true, tv:"TV TBA 7:00pm PT", status:"scheduled" },
+    { date:"2027-01-02", opp:"New York Islanders", home:true, tv:"TV TBA 7:00pm PT", status:"scheduled" },
     { date:"2027-01-03", opp:"Vancouver Canucks", home:true, tv:"TV TBA 5:00pm PT", status:"scheduled" },
     { date:"2027-01-05", opp:"Tampa Bay Lightning", home:true, tv:"TV TBA 6:40pm PT", status:"scheduled" },
     { date:"2027-01-08", opp:"Colorado Avalanche", home:false, tv:"TV TBA 6:00pm PT", status:"scheduled" },
@@ -906,8 +963,8 @@ const SCHEDULES = {
     { date:"2027-01-18", opp:"Columbus Blue Jackets", home:true, tv:"TV TBA 1:00pm PT", status:"scheduled" },
     { date:"2027-01-19", opp:"Los Angeles Kings", home:false, tv:"TV TBA 7:00pm PT", status:"scheduled" },
     { date:"2027-01-21", opp:"Buffalo Sabres", home:false, tv:"TV TBA 4:00pm PT", status:"scheduled" },
-    { date:"2027-01-23", opp:"New York", home:false, tv:"TV TBA 4:30pm PT", status:"scheduled" },
-    { date:"2027-01-25", opp:"New York", home:false, tv:"TV TBA 4:00pm PT", status:"scheduled" },
+    { date:"2027-01-23", opp:"New York Islanders", home:false, tv:"TV TBA 4:30pm PT", status:"scheduled" },
+    { date:"2027-01-25", opp:"New York Rangers", home:false, tv:"TV TBA 4:00pm PT", status:"scheduled" },
     { date:"2027-01-26", opp:"New Jersey Devils", home:false, tv:"TV TBA 4:00pm PT", status:"scheduled" },
     { date:"2027-01-28", opp:"Minnesota Wild", home:false, tv:"TNT 6:00pm PT", status:"scheduled" },
     { date:"2027-01-31", opp:"New Jersey Devils", home:true, tv:"TV TBA 1:00pm PT", status:"scheduled" },
@@ -1175,22 +1232,112 @@ const SCHEDULE_NOTES = {
   sea: "2026 season schedule, sourced from the NFL/team schedule release. Seattle enters as the reigning Super Bowl LX champion, hence the Week 1 rematch with New England. A few Sunday-window TV networks are marked TBA where the source wasn't explicit.",
   chi: "2026 season schedule, sourced from the Bears' official schedule release (with confirmed TV networks through Week 14). Weeks 15-18 TV still TBA pending network confirmation.",
   den: "2026 season schedule, sourced from Denver-market news coverage of the NFL schedule release. TV network TBA where the source didn't specify.",
-  lak: "Full 2026-27 regular season (all 84 games), cross-checked against the Kings' own ticketing schedule — this corrected an earlier missing game (Oct. 10 @ Vegas) and fixed away-game times, which are shown here in Pacific Time throughout (the team's home broadcast convention), same as this source uses.",
-  skk: "Full 2026-27 regular season (all 84 games), sourced from the Kraken's own ticketing schedule (times shown in Pacific, the team's home broadcast convention). Four games are listed only as 'New York' without specifying Islanders vs. Rangers — flag if you know which is which and I'll fix it. TV networks are mostly unconfirmed (TBA) since this source didn't list them; only the Jan. 28 TNT game and the home opener were specified."
+  lak: "Full 2026-27 regular season (all 84 games). ALL TIMES PACIFIC.",
+  skk: "Full 2026-27 regular season (all 84 games). ALL TIMES PACIFIC."
 };
+
+// Teams with long enough seasons that a flat list gets unwieldy — grouped by
+// month with collapsible sections instead of one continuous scroll.
+const LONG_SEASON_TEAMS = ["lak", "skk"];
+
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+// Collapse state persists across re-renders (e.g. a live-score refresh)
+// rather than resetting whenever the page redraws. Keyed per team+month so
+// each team's toggle state is independent.
+let MONTH_COLLAPSE_STATE = {};
+
+function monthStateKey(teamKey, year, month){ return `${teamKey}:${year}-${month}`; }
+
+function groupGamesByMonth(games){
+  const groups = [];
+  let current = null;
+  games.forEach(g => {
+    const [y, m] = g.date.split("-").map(Number);
+    if (!current || current.year !== y || current.month !== m){
+      current = { year:y, month:m, games:[] };
+      groups.push(current);
+    }
+    current.games.push(g);
+  });
+  return groups;
+}
+
+function recordFor(games){
+  let w = 0, l = 0;
+  games.forEach(g => {
+    if (g.status === "final"){
+      if (g.score.team > g.score.opp) w++;
+      else if (g.score.team < g.score.opp) l++;
+    }
+  });
+  return { w, l };
+}
+
+function toggleMonth(key){
+  MONTH_COLLAPSE_STATE[key] = !MONTH_COLLAPSE_STATE[key];
+  renderAll();
+}
+
+function setAllMonths(teamKey, collapsed){
+  Object.keys(MONTH_COLLAPSE_STATE).forEach(k => {
+    if (k.startsWith(teamKey + ":")) MONTH_COLLAPSE_STATE[k] = collapsed;
+  });
+  renderAll();
+}
+
+function renderMonthGroupedSchedule(teamKey, team, games){
+  const groups = groupGamesByMonth(games);
+  let cumW = 0, cumL = 0;
+  const sections = groups.map(grp => {
+    const { w, l } = recordFor(grp.games);
+    cumW += w; cumL += l;
+    const allFinal = grp.games.every(g => g.status === "final");
+    const key = monthStateKey(teamKey, grp.year, grp.month);
+    // Default collapsed only the first time we ever see this month, and only
+    // if every game in it is already final — future visits respect whatever
+    // the user last set, even after a live-score re-render.
+    if (!(key in MONTH_COLLAPSE_STATE)) MONTH_COLLAPSE_STATE[key] = allFinal;
+    const collapsed = MONTH_COLLAPSE_STATE[key];
+    const monthLabel = `${MONTH_NAMES[grp.month - 1]} ${grp.year}`;
+    let recordLabel = "";
+    if (allFinal) recordLabel = `${w}-${l}, ${cumW}-${cumL} overall`;
+    else if (w + l > 0) recordLabel = `${w}-${l} so far, ${cumW}-${cumL} overall`;
+    return `
+      <div class="month-group">
+        <button class="month-header ${collapsed ? "collapsed" : ""}" onclick="toggleMonth('${key}')">
+          <span class="month-chevron">▶</span>
+          <span class="month-title">${monthLabel}</span>
+          ${recordLabel ? `<span class="month-record">${recordLabel}</span>` : ""}
+        </button>
+        <div class="month-body" style="display:${collapsed ? "none" : "block"}">
+          <div class="game-list">
+            ${grp.games.map(g => gameCardHTML(g, team)).join("")}
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+  return `
+    <div class="month-toolbar">
+      <button class="refresh-btn" onclick="setAllMonths('${teamKey}', false)">Expand All</button>
+      <button class="refresh-btn" onclick="setAllMonths('${teamKey}', true)">Collapse All</button>
+    </div>
+    ${sections}`;
+}
 
 function renderTeamSchedule(sportKey, teamKey){
   const team = TEAMS[sportKey].teams[teamKey];
   const games = SCHEDULES[teamKey] || [];
   const note = SCHEDULE_NOTES[teamKey] || "Sample data shown for layout preview. Real dates/opponents/TV/scores to follow.";
   const logo = LOGOS[teamKey] ? `<img class="header-logo" src="${LOGOS[teamKey]}" alt="${team.name} logo">` : "";
+  const scheduleBody = LONG_SEASON_TEAMS.includes(teamKey)
+    ? renderMonthGroupedSchedule(teamKey, team, games)
+    : `<div class="game-list">${games.map(g => gameCardHTML(g, team)).join("")}</div>`;
   return `
     <div class="schedule-narrow">
       <h2 class="section-title header-with-logo">${logo}<span>${team.name} — Full Schedule</span></h2>
       <div class="note">${note}</div>
-      <div class="game-list">
-        ${games.map(g => gameCardHTML(g, team)).join("")}
-      </div>
+      ${scheduleBody}
     </div>`;
 }
 
@@ -1350,11 +1497,23 @@ const AP_POLL_ALIASES = {
 };
 const AP_POLL_NAMES_BY_LENGTH = [...AP_POLL].sort((a, b) => b.team.length - a.team.length);
 
-function matchApTeam(espnDisplayName){
-  if (!espnDisplayName) return null;
+// ESPN's team object shape varies by response — sometimes displayName is the full
+// "School Mascot" combo, sometimes it's mascot-only and the school name only shows
+// up in location/name/shortDisplayName. Check every candidate field rather than
+// assuming one; a match failure here used to fail silently (stale data) or, worse,
+// get treated as a brand-new team and overwrite the correct school name with a
+// mascot-only one.
+function apTeamCandidates(team){
+  if (!team) return [];
+  return [team.location, team.displayName, team.name, team.shortDisplayName].filter(Boolean);
+}
+
+function matchApTeam(team){
+  const candidates = apTeamCandidates(team);
+  if (!candidates.length) return null;
   for (const row of AP_POLL_NAMES_BY_LENGTH){
-    const candidates = AP_POLL_ALIASES[row.team] || [row.team];
-    if (candidates.some(c => espnDisplayName.includes(c))) return row;
+    const aliases = AP_POLL_ALIASES[row.team] || [row.team];
+    if (aliases.some(a => candidates.some(c => c.includes(a)))) return row;
   }
   return null;
 }
@@ -1376,11 +1535,30 @@ async function fetchApPoll(forceRerender){
     const ranks = apPoll?.ranks;
     if (!ranks || !ranks.length) throw new Error("Unexpected response shape from ESPN rankings API");
 
+    // Validate the shape fully before touching AP_POLL at all — a malformed
+    // response (e.g. every rank undefined) must never be allowed to wipe out
+    // the existing list.
+    const ranksLookValid = ranks.every(r => Number.isInteger(r.current));
+    if (!ranksLookValid) throw new Error("Rankings entries missing a usable rank number");
+
     let matched = 0;
+    const newlyAdded = [];
+    const touched = new Set();
     ranks.forEach(r => {
-      const displayName = r.team?.displayName || r.team?.name || r.team?.shortDisplayName;
-      const target = matchApTeam(displayName);
-      // Deliberately never overwrite target.team — we keep the school name
+      let target = matchApTeam(r.team);
+      // A team that wasn't in the preseason 25 but has since climbed into the
+      // rankings has no existing row to match — add one rather than drop it.
+      // Prefer "location" (usually just the school name) over the full
+      // displayName so a genuinely new entry still reads as a school name
+      // rather than a mascot where possible.
+      if (!target){
+        const bestName = r.team?.location || r.team?.displayName || r.team?.name || r.team?.shortDisplayName;
+        if (bestName){
+          target = { rank: r.current, team: bestName, votes:0, record:"0-0", points:0, trend:"NR" };
+          newlyAdded.push(target);
+        }
+      }
+      // Deliberately never overwrite an existing target.team — we keep the school name
       // (e.g. "USC") rather than whatever mascot-only name ESPN returns.
       if (target){
         target.rank = r.current ?? target.rank;
@@ -1388,10 +1566,21 @@ async function fetchApPoll(forceRerender){
         target.record = r.recordSummary || target.record;
         target.points = r.points ?? target.points;
         target.trend = r.trend || target.trend;
+        touched.add(target);
         matched++;
       }
     });
     if (matched === 0) throw new Error("Fetched poll but couldn't match any team names");
+
+    // Only now that we know the fetch was genuinely usable do we mutate the list:
+    // add newly-ranked teams, then drop anyone this fetch didn't actually touch
+    // (tracked by object identity, not rank number — a rank slot can change hands
+    // to a different team entirely, so the old occupant must not survive on a
+    // number-only check).
+    newlyAdded.forEach(t => { AP_POLL.push(t); AP_POLL_NAMES_BY_LENGTH.push(t); });
+    for (let i = AP_POLL.length - 1; i >= 0; i--){
+      if (!touched.has(AP_POLL[i])) AP_POLL.splice(i, 1);
+    }
     AP_POLL.sort((a, b) => a.rank - b.rank);
 
     // Same response, different poll source — grab CFP committee rankings if present.
@@ -1399,7 +1588,7 @@ async function fetchApPoll(forceRerender){
     if (cfpPoll?.ranks?.length){
       CFP_POLL = cfpPoll.ranks.map(r => ({
         rank: r.current,
-        team: r.team?.displayName || r.team?.name || "Unknown",
+        team: r.team?.location || r.team?.displayName || r.team?.name || "Unknown",
         record: r.recordSummary || "0-0",
         trend: r.trend || "NR"
       }));
@@ -1528,12 +1717,12 @@ function renderCFBStandings(){
     <h2 class="section-title">CFB Standings</h2>
     <div class="standings-2col">
       <div>
-        <div class="col-heading heading-with-btn"><span>AP Top 25</span><button class="refresh-btn" onclick="fetchApPoll(true)">Refresh now</button></div>
+        <div class="col-heading heading-with-btn"><span>AP Top 25</span><button class="refresh-btn refresh-btn-lg" onclick="fetchApPoll(true)">Refresh now</button></div>
         <div class="note">${apPollStatusNote()}</div>
         ${apPollTable()}
       </div>
       <div>
-        <div class="col-heading heading-with-btn"><span>Big Ten Conference Standings</span><button class="refresh-btn" onclick="fetchBigTenStandings(true)">Refresh now</button></div>
+        <div class="col-heading heading-with-btn"><span>Big Ten Conference Standings</span><button class="refresh-btn refresh-btn-lg" onclick="fetchBigTenStandings(true)">Refresh now</button></div>
         <div class="note">Sorted by conference wins, then overall wins. ${bigTenFetchStatusNote()}</div>
         ${bigTenTable()}
       </div>
